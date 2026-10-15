@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data Redundancy Removal System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <p class="tag">CodeAlpha Cloud Computing Internship</p>
+      <h1>Data Redundancy Removal System</h1>
+      <p>Validate new data before it reaches the database. Exact duplicates and highly similar records are blocked.</p>
+    </section>
+
+    <section class="card">
+      <h2>Submit data</h2>
+      <textarea id="content" placeholder="Enter a customer record, note, address, or other text..."></textarea>
+      <div class="actions">
+        <button onclick="validateData()">Validate</button>
+        <button class="primary" onclick="saveData()">Validate &amp; Save</button>
+      </div>
+      <pre id="result"></pre>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>Verified records</h2>
+        <button class="danger" onclick="clearRecords()">Clear Demo Data</button>
+      </div>
+      <div id="records"></div>
+    </section>
+  </main>
+
+<script>
+async function validateData() {
+  const content = document.getElementById("content").value;
+  const response = await fetch("/api/validate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({content})
+  });
+  const data = await response.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+}
+
+async function saveData() {
+  const content = document.getElementById("content").value;
+  const response = await fetch("/api/records", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({content})
+  });
+  const data = await response.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  if (response.ok) {
+    document.getElementById("content").value = "";
+    loadRecords();
+  }
+}
+
+async function loadRecords() {
+  const response = await fetch("/api/records");
+  const rows = await response.json();
+  const target = document.getElementById("records");
+  if (!rows.length) {
+    target.innerHTML = "<p class='muted'>No records yet.</p>";
+    return;
+  }
+  target.innerHTML = rows.map(r => `
+    <article class="record">
+      <div><strong>#${r.id}</strong> ${escapeHtml(r.content)}</div>
+      <small>${r.created_at}</small>
+    </article>
+  `).join("");
+}
+
+async function clearRecords() {
+  if (!confirm("Clear all demo records?")) return;
+  await fetch("/api/records/clear", {method: "POST"});
+  loadRecords();
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+  }[c]));
+}
+
+loadRecords();
+</script>
+</body>
+</html>
